@@ -1,0 +1,115 @@
+using System;
+using System.Collections.Generic;
+class BugReport
+{
+    public string Id { get; set; }
+    public string Title { get; set; }
+    public string Priority { get; set; }
+    public string Severity { get; set; }
+    public string Module { get; set; }
+    public List<string> Steps { get; set; }
+    public string Expected { get; set; }
+    public string Actual { get; set; }
+    public string Environment { get; set; }
+    public string Status { get; set; }
+
+    public void PrintReport()
+    {
+        Console.WriteLine($"\n[Bug Report {Id}]");
+        Console.WriteLine($"Title: {Title}");
+        Console.WriteLine($"Priority: {Priority}, Severity: {Severity}");
+        Console.WriteLine($"Module: {Module}");
+        Console.WriteLine("Steps to reproduce:");
+        foreach (var step in Steps) Console.WriteLine($"- {step}");
+        Console.WriteLine($"Expected: {Expected}");
+        Console.WriteLine($"Actual: {Actual}");
+        Console.WriteLine($"Environment: {Environment}");
+        Console.WriteLine($"Status: {Status}");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        var reports = new List<BugReport>
+        {
+            new BugReport
+            {
+                Id = "CALC-001",
+                Title = "Деление на ноль не обрабатывается корректно",
+                Priority = "High",
+                Severity = "Critical",
+                Module = "Операция деления",
+                Steps = new List<string> { "Запустить калькулятор", "Ввести: 5 / 0" },
+                Expected = "Сообщение об ошибке",
+                Actual = "Выводится Infinity",
+                Environment = "Windows 10, v1.0",
+                Status = "Open"
+            },
+            new BugReport
+            {
+                Id = "CALC-002",
+                Title = "Некорректное умножение отрицательных чисел",
+                Priority = "Medium",
+                Severity = "Major",
+                Module = "Операция умножения",
+                Steps = new List<string> { "Запустить калькулятор", "Ввести: -3 * -5" },
+                Expected = "15",
+                Actual = "-15",
+                Environment = "macOS 12, v1.0",
+                Status = "In Progress"
+            }
+        };
+
+        Console.WriteLine("=== CALCULATOR DEFECT REPORT ===");
+        foreach (var report in reports)
+        {
+            report.PrintReport();
+        }
+    }
+}
+
+
+1. Шаблон отчета о дефекте
+Поле	Описание
+ID дефекта	Уникальный идентификатор (например, CALC-001)
+Название	Краткое описание проблемы
+Приоритет	Critical/High/Medium/Low
+Серьезность	Blocker/Critical/Major/Minor/Cosmetic
+Модуль	Какой компонент затронут (например, "Операция деления")
+Шаги воспроизведения	Пошаговая инструкция
+Ожидаемый результат	Как должно работать правильно
+Фактический результат	Что происходит на самом деле
+Окружение	ОС, версия приложения, браузер (если веб)
+Статус	New/Open/In Progress/Retest/Closed/Rejected
+Комментарии	Дополнительная информация
+2. Примеры заполненных отчетов
+Дефект CALC-001
+Поле	Значение
+ID дефекта	CALC-001
+Название	Деление на ноль не обрабатывается корректно
+Приоритет	High
+Серьезность	Critical
+Модуль	Операция деления
+Шаги воспроизведения	1. Запустить калькулятор
+2. Ввести: 5 / 0
+Ожидаемый результат	Сообщение об ошибке "Деление на ноль невозможно"
+Фактический результат	Бесконечность (Infinity) выводится как результат
+Окружение	Windows 10, версия калькулятора 1.0
+Статус	Open
+Комментарии	Необходима проверка всех арифметических операций
+Дефект CALC-002
+Поле	Значение
+ID дефекта	CALC-002
+Название	Некорректная обработка отрицательных чисел при умножении
+Приоритет	Medium
+Серьезность	Major
+Модуль	Операция умножения
+Шаги воспроизведения	1. Запустить калькулятор
+2. Ввести: -3 * -5
+Ожидаемый результат	Результат: 15
+Фактический результат	Результат: -15
+Окружение	macOS 12, версия калькулятора 1.0
+Статус	In Progress
+Комментарии	Проблема только с двумя отрицательными числами

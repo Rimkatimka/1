@@ -1,0 +1,147 @@
+dotnet add package xunit
+dotnet add package xunit.runner.visualstudio
+using System;
+using Xunit;
+
+public class CalculatorTests
+{
+    // Тесты для операции сложения
+    public class AdditionTests
+    {
+        [Fact]
+        public void Add_TwoPositiveNumbers_ReturnsCorrectSum()
+        {
+            // Arrange
+            double a = 5;
+            double b = 3;
+            char op = '+';
+            
+            // Act
+            double result = Program.Calculate(a, b, op);
+            
+            // Assert
+            Assert.Equal(8, result);
+        }
+
+        [Fact]
+        public void Add_PositiveAndNegativeNumbers_ReturnsCorrectSum()
+        {
+            double result = Program.Calculate(5, -3, '+');
+            Assert.Equal(2, result);
+        }
+
+        [Fact]
+        public void Add_WithZero_ReturnsSameNumber()
+        {
+            double result = Program.Calculate(5, 0, '+');
+            Assert.Equal(5, result);
+        }
+    }
+
+    // Тесты для операции вычитания
+    public class SubtractionTests
+    {
+        [Fact]
+        public void Subtract_TwoNumbers_ReturnsCorrectDifference()
+        {
+            double result = Program.Calculate(10, 4, '-');
+            Assert.Equal(6, result);
+        }
+
+        [Fact]
+        public void Subtract_ResultsInNegativeNumber_ReturnsCorrectResult()
+        {
+            double result = Program.Calculate(3, 5, '-');
+            Assert.Equal(-2, result);
+        }
+    }
+
+    // Тесты для операции умножения
+    public class MultiplicationTests
+    {
+        [Fact]
+        public void Multiply_TwoNumbers_ReturnsCorrectProduct()
+        {
+            double result = Program.Calculate(3, 5, '*');
+            Assert.Equal(15, result);
+        }
+
+        [Fact]
+        public void Multiply_ByZero_ReturnsZero()
+        {
+            double result = Program.Calculate(5, 0, '*');
+            Assert.Equal(0, result);
+        }
+
+        [Fact]
+        public void Multiply_NegativeNumbers_ReturnsPositiveResult()
+        {
+            double result = Program.Calculate(-3, -5, '*');
+            Assert.Equal(15, result);
+        }
+    }
+
+    // Тесты для операции деления
+    public class DivisionTests
+    {
+        [Fact]
+        public void Divide_TwoNumbers_ReturnsCorrectQuotient()
+        {
+            double result = Program.Calculate(20, 4, '/');
+            Assert.Equal(5, result);
+        }
+
+        [Fact]
+        public void Divide_ByOne_ReturnsSameNumber()
+        {
+            double result = Program.Calculate(7, 1, '/');
+            Assert.Equal(7, result);
+        }
+
+        [Fact]
+        public void Divide_ByZero_ThrowsDivideByZeroException()
+        {
+            Assert.Throws<DivideByZeroException>(() => Program.Calculate(5, 0, '/'));
+        }
+
+        [Fact]
+        public void Divide_NonEvenDivision_ReturnsFractionalResult()
+        {
+            double result = Program.Calculate(5, 2, '/');
+            Assert.Equal(2.5, result);
+        }
+    }
+
+    // Тесты для невалидных операций
+    public class InvalidOperationTests
+    {
+        [Fact]
+        public void InvalidOperator_ThrowsArgumentException()
+        {
+            Assert.Throws<ArgumentException>(() => Program.Calculate(5, 3, 'x'));
+        }
+
+        [Fact]
+        public void UnknownOperator_ThrowsArgumentExceptionWithMessage()
+        {
+            var ex = Assert.Throws<ArgumentException>(() => Program.Calculate(5, 3, '%'));
+            Assert.Contains("Неподдерживаемая операция", ex.Message);
+        }
+    }
+
+    // Параметризированные тесты для проверки нескольких значений
+    public class ParameterizedTests
+    {
+        [Theory]
+        [InlineData(2, 3, '+', 5)]
+        [InlineData(10, 5, '-', 5)]
+        [InlineData(4, 5, '*', 20)]
+        [InlineData(20, 4, '/', 5)]
+        public void Calculate_WithDifferentOperations_ReturnsCorrectResults(
+            double a, double b, char op, double expected)
+        {
+            double result = Program.Calculate(a, b, op);
+            Assert.Equal(expected, result);
+        }
+    }
+}
