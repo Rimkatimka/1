@@ -1,0 +1,41 @@
+public static void Main(string[] args)
+    {
+        string connectionString = "ваша строка подключения"; // Замените на свою строку подключения
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+            SqlTransaction transaction = connection.BeginTransaction();
+            SqlCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+
+            try
+            {
+                // Первая операция
+                command.CommandText = "UPDATE Stocks SET Quantity = Quantity - 1 WHERE ItemId = 123";
+                command.ExecuteNonQuery();
+
+                // Вторая операция
+                command.CommandText = "UPDATE Orders SET Status = 'Processed' WHERE OrderId = 456";
+                command.ExecuteNonQuery();
+
+                // Третья операция (пример ошибки)
+                // command.CommandText = "UPDATE NonExistentTable SET Value = 10"; // Ошибка, транзакция будет откачена
+                // command.ExecuteNonQuery();
+
+                transaction.Commit(); // Фиксация изменений (если все успешно)
+                Console.WriteLine("Транзакция успешно завершена.");
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    transaction.Rollback(); // Откат изменений в случае ошибки
+                    Console.WriteLine("Транзакция откачена: " + ex.Message);
+                }
+                catch (Exception ex2)
+                {
+                    Console.WriteLine("Ошибка при откате транзакции: " + ex2.Message);
+                }
+            }
+        }
+    }
