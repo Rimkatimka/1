@@ -1,0 +1,390 @@
+Строитель (Builder) - шаблон проектирования, который инкапсулирует создание объекта и позволяет разделить его на различные этапы.
+
+Когда использовать паттерн Строитель?
+Когда процесс создания нового объекта не должен зависеть от того, из каких частей этот объект состоит и как эти части связаны между собой
+
+Когда необходимо обеспечить получение различных вариаций объекта в процессе его создания
+
+Формально в UML паттерн мог бы выглядеть следующим образом:
+
+Паттерн Строитель в C# и .NET
+Формальное определение на C# могло бы выглядеть так:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+class Client
+{
+    void Main()
+    {
+        Builder builder = new ConcreteBuilder();
+        Director director = new Director(builder);
+        director.Construct();
+        Product product = builder.GetResult();
+    }
+}
+class Director
+{
+    Builder builder;
+    public Director(Builder builder)
+    {
+        this.builder = builder;
+    }
+    public void Construct()
+    {
+        builder.BuildPartA();
+        builder.BuildPartB();
+        builder.BuildPartC();
+    }
+}
+ 
+abstract class Builder
+{
+    public abstract void BuildPartA();
+    public abstract void BuildPartB();
+    public abstract void BuildPartC();
+    public abstract Product GetResult();
+}
+ 
+class Product
+{
+    List<object> parts = new List<object>();
+    public void Add(string part)
+    {
+        parts.Add(part);
+    }
+}
+ 
+class ConcreteBuilder : Builder
+{
+    Product product = new Product();
+    public override void BuildPartA()
+    {
+        product.Add("Part A");
+    }
+    public override void BuildPartB()
+    {
+        product.Add("Part B");
+    }
+    public override void BuildPartC()
+    {
+        product.Add("Part C");
+    }
+    public override Product GetResult()
+    {
+        return product;
+    }
+}
+Участники
+Product: представляет объект, который должен быть создан. В данном случае все части объекта заключены в списке parts.
+
+Builder: определяет интерфейс для создания различных частей объекта Product
+
+ConcreteBuilder: конкретная реализация Buildera. Создает объект Product и определяет интерфейс для доступа к нему
+
+Director: распорядитель - создает объект, используя объекты Builder
+
+Рассмотрим применение паттерна на примере выпечки хлеба. Как известно, даже обычный хлеб включает множество компонентов. Мы можем использовать для представления хлеба и его компонентов следующие классы:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+//мука
+class Flour
+{
+    // какого сорта мука
+    public string Sort { get; set; }
+}
+// соль
+class Salt
+{}
+// пищевые добавки
+class Additives
+{
+    public string Name { get; set; }
+}
+ 
+class Bread
+{
+    // мука
+    public Flour Flour { get; set; }
+    // соль
+    public Salt Salt { get; set; }
+    // пищевые добавки
+    public Additives Additives { get; set; }
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder();
+ 
+        if (Flour != null)
+            sb.Append(Flour.Sort + "\n");
+        if (Salt != null)
+            sb.Append("Соль \n");
+        if (Additives != null)
+            sb.Append("Добавки: "+Additives.Name+" \n");
+        return sb.ToString();
+    }
+}
+Кстати в данном случае для построения строки используется класс StringBuilder.
+
+Хлеб может иметь различную комбинацию компонентов: ржаной и пшеничной муки, соли, пищевых добавок. И нам надо обеспечить выпечку разных сортов хлеба. Для разных сортов хлеба может варьироваться конкретный набор компонентов, не все компоненты могут использоваться. И для этой задачи применим паттерн Builder:
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+class Program
+{
+    static void Main(string[] args)
+    {
+        // содаем объект пекаря
+        Baker baker = new Baker();
+        // создаем билдер для ржаного хлеба
+        BreadBuilder builder = new RyeBreadBuilder();
+        // выпекаем
+        Bread ryeBread = baker.Bake(builder);
+        Console.WriteLine(ryeBread.ToString());
+        // оздаем билдер для пшеничного хлеба
+        builder = new WheatBreadBuilder();
+        Bread wheatBread = baker.Bake(builder);
+        Console.WriteLine(wheatBread.ToString());
+ 
+        Console.Read();
+    }
+}
+// абстрактный класс строителя
+abstract class BreadBuilder
+{
+    public Bread Bread { get; private set; }
+    public void CreateBread()
+    {
+        Bread = new Bread();
+    }
+    public abstract void SetFlour();
+    public abstract void SetSalt();
+    public abstract void SetAdditives();
+}
+// пекарь
+class Baker
+{
+    public Bread Bake(BreadBuilder breadBuilder)
+    {
+        breadBuilder.CreateBread();
+        breadBuilder.SetFlour();
+        breadBuilder.SetSalt();
+        breadBuilder.SetAdditives();
+        return breadBuilder.Bread;
+    }
+}
+// строитель для ржаного хлеба
+class RyeBreadBuilder : BreadBuilder
+{
+    public override void SetFlour()
+    {
+        this.Bread.Flour = new Flour { Sort = "Ржаная мука 1 сорт" };
+    }
+ 
+    public override void SetSalt()
+    {
+        this.Bread.Salt = new Salt();
+    }
+ 
+    public override void SetAdditives()
+    {
+        // не используется
+    }
+}
+// строитель для пшеничного хлеба
+class WheatBreadBuilder : BreadBuilder
+{
+    public override void SetFlour()
+    {
+        this.Bread.Flour = new Flour { Sort = "Пшеничная мука высший сорт" };
+    }
+ 
+    public override void SetSalt()
+    {
+        this.Bread.Salt = new Salt();
+    }
+ 
+    public override void SetAdditives()
+    {
+        this.Bread.Additives = new Additives { Name = "улучшитель хлебопекарный" };
+    }
+}
+Консольный вывод программы:
+
+Ржаная мука 1 сорт
+Соль
+
+Пшеничная мука высший сорт
+Соль
+Добавки: улучшитель хлебопекарный
+В данном случае с помощью конкретных строителей RyeBreadBuilder и WheatBreadBuilder создаются объекты Bread с определенным набором. В роли распорядителя выступает класс пекаря Baker, который вызывает методы конкретных строителей для построения нового объекта.
