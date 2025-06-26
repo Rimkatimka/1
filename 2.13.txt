@@ -1,0 +1,278 @@
+1. Модульные тесты API
+csharp
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Xunit;
+using Newtonsoft.Json;
+
+public class TodoApiTests
+{
+    private readonly HttpClient _client = new HttpClient();
+    private const string ApiUrl = "https://jsonplaceholder.typicode.com/todos/1";
+
+    public class TodoItem
+    {
+        public int UserId { get; set; }
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public bool Completed { get; set; }
+    }
+
+    [Fact]
+    public async Task GetTodo_ReturnsSuccessStatusCode()
+    {
+        // Act
+        var response = await _client.GetAsync(ApiUrl);
+        
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTodo_ReturnsCorrectContentType()
+    {
+        // Act
+        var response = await _client.GetAsync(ApiUrl);
+        
+        // Assert
+        Assert.Equal("application/json; charset=utf-8", 
+                   response.Content.Headers.ContentType.ToString());
+    }
+
+    [Fact]
+    public async Task GetTodo_ReturnsValidTodoItem()
+    {
+        // Act
+        var response = await _client.GetAsync(ApiUrl);
+        var content = await response.Content.ReadAsStringAsync();
+        var todo = JsonConvert.DeserializeObject<TodoItem>(content);
+        
+        // Assert
+        Assert.Equal(1, todo.Id);
+        Assert.Equal(1, todo.UserId);
+        Assert.False(string.IsNullOrEmpty(todo.Title));
+        Assert.True(todo.Completed == true || todo.Completed == false);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task GetTodo_WithDifferentIds_ReturnsCorrectItem(int id)
+    {
+        // Arrange
+        var url = $"https://jsonplaceholder.typicode.com/todos/{id}";
+        
+        // Act
+        var response = await _client.GetAsync(url);
+        var todo = JsonConvert.DeserializeObject<TodoItem>(
+            await response.Content.ReadAsStringAsync());
+        
+        // Assert
+        Assert.Equal(id, todo.Id);
+    }
+}
+2. Нагрузочное тестирование API
+csharp
+using System;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+
+class ApiLoadTest
+{
+    static async Task Main()
+    {
+        const string apiUrl = "https://jsonplaceholder.typicode.com/todos/1";
+        const int concurrentRequests = 100;
+        const int durationSeconds = 30;
+        
+        Console.WriteLine($"Starting API load test: {concurrentRequests} threads, {durationSeconds} seconds");
+        
+        var stats = new TestStatistics();
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(durationSeconds));
+        
+        var tasks = new Task[concurrentRequests];
+        for (int i = 0; i < concurrentRequests; i++)
+        {
+            tasks[i] = Task.Run(async () => 
+            {
+                var client = new HttpClient();
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var stopwatch = Stopwatch.StartNew();
+                        var response = await client.GetAsync(apiUrl, cts.Token);
+                        
+                        if (response.IsSuccessStatusCode)
+                        {
+                            stats.RecordSuccess(stopwatch.ElapsedMilliseconds);
+                        }
+                        else
+                        {
+                            stats.RecordFailure(response.StatusCode.ToString());
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        stats.RecordFailure(ex.GetType().Name);
+                    }
+                }
+            }, cts.Token);
+        }
+
+        // Display progress
+        var progressTask = Task.Run(async () =>
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                Console.Clear();
+                Console.WriteLine($"Requests: {stats.TotalRequests}");
+                Console.WriteLine($"Success: {stats.SuccessfulRequests} ({stats.SuccessRate:P})");
+                Console.WriteLine($"Failures: {stats.FailedRequests}");
+                Console.WriteLine($"Avg. Response Time: {stats.AverageResponseTime} ms");
+                Console.WriteLine($"RPS: {stats.RequestsPerSecond:F2}");
+                
+                await Task.Delay(1000, cts.Token);
+            }
+        }, cts.Token);
+
+        await Task.WhenAll(tasks);
+        cts.Cancel();
+        
+        Console.WriteLine("\nFinal Results:");
+        Console.WriteLine($"Total Requests: {stats.TotalRequests}");
+        Console.WriteLine($"Successful: {stats.SuccessfulRequests}");
+        Console.WriteLine($"Failed: {stats.FailedRequests}");
+        Console.WriteLine($"Success Rate: {stats.SuccessRate:P}");
+        Console.WriteLine($"Average Response Time: {stats.AverageResponseTime} ms");
+        Console.WriteLine($"Requests Per Second: {stats.RequestsPerSecond:F2}");
+        
+        if (stats.ErrorCounts.Count > 0)
+        {
+            Console.WriteLine("\nError Breakdown:");
+            foreach (var error in stats.ErrorCounts)
+            {
+                Console.WriteLine($"{error.Key}: {error.Value}");
+            }
+        }
+    }
+}
+
+class TestStatistics
+{
+    private long _totalRequests = 0;
+    private long _successfulRequests = 0;
+    private long _totalResponseTime = 0;
+    private readonly object _lock = new object();
+    
+    public Dictionary<string, int> ErrorCounts { get; } = new Dictionary<string, int>();
+    
+    public long TotalRequests => _totalRequests;
+    public long SuccessfulRequests => _successfulRequests;
+    public long FailedRequests => _totalRequests - _successfulRequests;
+    public double SuccessRate => _totalRequests == 0 ? 0 : (double)_successfulRequests / _totalRequests;
+    public long AverageResponseTime => _successfulRequests == 0 ? 0 : _totalResponseTime / _successfulRequests;
+    public double RequestsPerSecond { get; private set; }
+    
+    private long _lastTotalRequests = 0;
+    private DateTime _lastUpdateTime = DateTime.Now;
+    
+    public void RecordSuccess(long responseTimeMs)
+    {
+        lock (_lock)
+        {
+            _totalRequests++;
+            _successfulRequests++;
+            _totalResponseTime += responseTimeMs;
+            UpdateRps();
+        }
+    }
+    
+    public void RecordFailure(string errorType)
+    {
+        lock (_lock)
+        {
+            _totalRequests++;
+            
+            if (ErrorCounts.ContainsKey(errorType))
+                ErrorCounts[errorType]++;
+            else
+                ErrorCounts[errorType] = 1;
+            
+            UpdateRps();
+        }
+    }
+    
+    private void UpdateRps()
+    {
+        var now = DateTime.Now;
+        var elapsed = (now - _lastUpdateTime).TotalSeconds;
+        if (elapsed >= 1)
+        {
+            RequestsPerSecond = (_totalRequests - _lastTotalRequests) / elapsed;
+            _lastTotalRequests = _totalRequests;
+            _lastUpdateTime = now;
+        }
+    }
+}
+3. Инструкция по запуску
+Модульные тесты:
+
+Установите пакеты:
+
+bash
+dotnet add package xunit
+dotnet add package xunit.runner.visualstudio
+dotnet add package Newtonsoft.Json
+Запустите тесты:
+
+bash
+dotnet test
+Нагрузочное тестирование:
+
+Просто запустите программу (не требует дополнительных пакетов)
+
+Настройте параметры в начале метода Main:
+
+concurrentRequests - количество одновременных запросов
+
+durationSeconds - длительность теста в секундах
+
+4. Что проверяют тесты
+Модульные тесты:
+
+Статус код ответа (200 OK)
+
+Content-Type (application/json)
+
+Структуру возвращаемого JSON
+
+Корректность данных для разных ID
+
+Нагрузочное тестирование:
+
+Общее количество запросов
+
+Количество успешных/неудачных запросов
+
+Среднее время ответа
+
+Requests Per Second (RPS)
+
+Распределение ошибок по типам
+
+Для реального проекта добавьте:
+
+Тесты для POST/PUT/DELETE методов
+
+Проверку заголовков
+
+Авторизацию (если требуется)
+
+Тестирование граничных случаев
+
+Интеграцию с CI/CD
