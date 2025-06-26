@@ -1,0 +1,28 @@
+using System;
+using Xunit;
+
+public class CalculatorTests
+{
+    [Theory]
+    [InlineData(5, 3, '+', 8)]
+    [InlineData(10, 2, '-', 8)]
+    [InlineData(4, 5, '*', 20)]
+    [InlineData(20, 4, '/', 5)]
+    public void TestCalculate(double a, double b, char op, double expected)
+    {
+        double result = Program.Calculate(a, b, op);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void TestDivideByZero()
+    {
+        Assert.Throws<DivideByZeroException>(() => Program.Calculate(5, 0, '/'));
+    }
+
+    [Fact]
+    public void TestInvalidOperator()
+    {
+        Assert.Throws<ArgumentException>(() => Program.Calculate(5, 3, 'x'));
+    }
+}
