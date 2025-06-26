@@ -1,0 +1,39 @@
+private DataGridView dataGridView1;
+
+    public Form1()
+    {
+        InitializeComponent();
+        LoadData();
+    }
+
+    private void InitializeComponent()
+    {
+        dataGridView1 = new DataGridView();
+        dataGridView1.Dock = DockStyle.Fill;
+        Controls.Add(dataGridView1);
+    }
+
+    private void LoadData()
+    {
+        string connectionString = "ваша строка подключения";
+        string query = "SELECT * FROM ВашаТаблица";
+
+        try
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    connection.Open();
+                    SqlDataAdapter adapter = new SqlDataAdapter(command);
+                    DataTable dataTable = new DataTable();
+                    adapter.Fill(dataTable);
+                    dataGridView1.DataSource = dataTable;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Ошибка при загрузке данных: " + ex.Message);
+        }
+    }
